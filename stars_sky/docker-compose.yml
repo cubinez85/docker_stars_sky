@@ -1,0 +1,67 @@
+# ============================================================
+# docker-compose.yml для Stars Sky
+# PostgreSQL в Docker, Nginx на хосте
+# ============================================================
+
+services:
+  # PostgreSQL база данных
+  db:
+    image: postgres:15-alpine
+    container_name: stars_sky_db
+    restart: unless-stopped
+    ports:
+      - "6954:5432"
+    environment:
+      POSTGRES_DB: stars_sky
+      POSTGRES_USER: cubinez85
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_secure_password_here}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=ru_RU.utf8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cubinez85 -d stars_sky"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stars_sky_network
+
+  # Django + Gunicorn приложение
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stars_sky_web
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    env_file:
+      - .env
+    environment:
+      # Переопределяем хост и порт БД для Docker-сети
+      DB_HOST: db
+      DB_PORT: "5432"
+    volumes:
+      # Статика и медиа — чтобы Nginx на хосте мог их отдавать
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+      - logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - stars_sky_network
+
+volumes:
+  postgres_data:
+    driver: local
+  static_files:
+    driver: local
+  media_files:
+    driver: local
+  logs:
+    driver: local
+
+networks:
+  stars_sky_network:
+    driver: bridge
