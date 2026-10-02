@@ -42,10 +42,10 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
     volumes:
-      # Статика и медиа — чтобы Nginx на хосте мог их отдавать
-      - static_files:/app/staticfiles
-      - media_files:/app/media
-      - logs:/app/logs
+      # Bind mounts — статика и медиа прямо в host-папке
+      - ./staticfiles:/app/staticfiles
+      - ./media:/app/media
+      - ./logs:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -54,12 +54,6 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
-  static_files:
-    driver: local
-  media_files:
-    driver: local
-  logs:
     driver: local
 
 networks:
